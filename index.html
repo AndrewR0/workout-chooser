@@ -152,6 +152,14 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
   .inputs { grid-template-columns: 1fr 1fr; }
   .inputs .skip { grid-column: 1 / -1; justify-self: start; }
 }
+.title-row { display: flex; align-items: center; gap: 10px; }
+.help-btn { width: 30px; height: 30px; flex: none; border-radius: 50%; border: 2px solid var(--accent); background: var(--surface); color: var(--accent); font: 700 1.05rem var(--display); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.help-btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.guide { display: flex; flex-direction: column; gap: 14px; }
+.guide h3 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: .02em; }
+.guide ol, .guide ul { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 6px; max-width: 65ch; }
+.guide p { max-width: 65ch; }
+.guide .icon-inline { display: inline-flex; vertical-align: -3px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -159,7 +167,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 <div class="wrap">
   <header>
     <div>
-      <h1>Workout Chooser</h1>
+      <div class="title-row"><h1>Workout Chooser</h1><button id="help" class="help-btn" type="button" aria-label="How to use the app" title="How to use the app" aria-pressed="false">?</button></div>
       <p class="muted small">Pick your groups, get your circuit, log as you go.</p>
     </div>
     <div class="hdr-side">
@@ -209,6 +217,7 @@ function daysAgo(iso) {
 
 // ---------- state ----------
 let unit = ls.get("wc.unit", "lb");
+let showGuide = false;
 let theme = ls.get("wc.theme", "auto"); // auto follows the phone's light/dark setting
 function applyTheme() {
   if (theme === "auto") delete document.documentElement.dataset.theme;
@@ -332,7 +341,7 @@ function viewToday() {
   if (!loaded) return `<p class="muted">Loading your exercises…</p>`;
   if (session && session.started) return viewSession();
   if (session && !session.started) return viewPreview();
-  if (!exercises.length) return `<div class="empty"><p><b>No exercises yet.</b></p><p class="small">Add the movements you know on the Exercises tab, then come back here to build a session.</p><p style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn primary" id="add-starters">Add 18 starter exercises</button><button class="btn" data-goto="library">Add my own</button><button class="btn" data-import>Import a backup</button></p></div>`;
+  if (!exercises.length) return `<div class="empty"><p><b>No exercises yet.</b> New here? Tap <b>?</b> at the top for a quick guide.</p><p class="small">Add the movements you know on the Exercises tab, then come back here to build a session.</p><p style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn primary" id="add-starters">Add 18 starter exercises</button><button class="btn" data-goto="library">Add my own</button><button class="btn" data-import>Import a backup</button></p></div>`;
   const total = CATS.reduce((s, c) => s + counts[c], 0);
   const short = CATS.filter((c) => exercises.filter((e) => e.category === c).length < counts[c]);
   const ideal = counts.groups * 3;
@@ -448,8 +457,81 @@ function viewHistory() {
   </section>`).join("") + backupPanel();
 }
 
+function viewGuide() {
+  const ico = (id) => `<span class="icon-inline">${document.querySelector("#" + id + " svg")?.outerHTML || ""}</span>`;
+  return `<div class="guide">
+  <div class="row"><h2>How to use Workout Chooser</h2><button class="btn" id="close-guide">Close</button></div>
+
+  <section class="panel">
+    <h3>The idea</h3>
+    <p>Keep a list of every exercise you know, sorted into <b>upper body</b>, <b>lower body</b> and <b>core</b>. Each time you train, the app picks a mix for you, splits it into groups of about three, and remembers the weight and reps you used. It favors the exercises you haven't done for the longest time, so you stop repeating the same few.</p>
+  </section>
+
+  <section class="panel">
+    <h3>1. Build your exercise list</h3>
+    <ol>
+      <li>Open the <b>Exercises</b> tab.</li>
+      <li>Type a name, choose its category and tap <b>Add</b>.</li>
+      <li>Tap <b>Edit</b> on any exercise to rename it, move it to another category, set its last weight and reps, or delete it.</li>
+    </ol>
+    <p class="small muted">Starting from nothing? On the Today tab, <b>Add 18 starter exercises</b> gives you six common ones per category.</p>
+  </section>
+
+  <section class="panel">
+    <h3>2. Plan today's workout</h3>
+    <ol>
+      <li>On the <b>Today</b> tab, set <b>Groups</b> to how many circuits you have time for. Each group is about three exercises.</li>
+      <li>Set how many <b>upper body</b>, <b>lower body</b> and <b>core</b> exercises you want. They follow the group count unless you change them.</li>
+      <li>Tap <b>Pick my workout</b>. Each group mixes the categories.</li>
+      <li>Don't like one? Tap <b>Swap for another</b>, or <b>Reshuffle all</b> to start over.</li>
+    </ol>
+  </section>
+
+  <section class="panel">
+    <h3>3. Work out and log it</h3>
+    <ol>
+      <li>Tap <b>Start group 1</b>. Each exercise shows what you did last time.</li>
+      <li>Do the group as a circuit, as many rounds as you like.</li>
+      <li>The weight and reps boxes are filled in from last time. Change anything that was different. Leave weight empty for bodyweight.</li>
+      <li>Tap <b>Skip</b> on anything you didn't do, so it isn't logged.</li>
+      <li>Tap <b>Log group 1</b> to save and move on to the next group.</li>
+    </ol>
+    <p class="small muted">If you close the app mid-workout, it picks up where you left off.</p>
+  </section>
+
+  <section class="panel">
+    <h3>History and backups</h3>
+    <ul>
+      <li>The <b>History</b> tab lists everything you've logged, by day.</li>
+      <li>Your data is saved on this device only. Use <b>Export my data</b> at the bottom of History now and then to keep a backup file.</li>
+      <li><b>Import a backup</b> restores that file, or moves your data to another phone or computer. It merges with what's already there.</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h3>Settings at the top</h3>
+    <ul>
+      <li>${ico("theme-auto")} matches your phone's light or dark setting, ${ico("theme-light")} is always light, and ${ico("theme-dark")} is always dark.</li>
+      <li><b>lb</b> / <b>kg</b> sets the unit for new weights you log.</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h3>Put it on your home screen</h3>
+    <ul>
+      <li><b>iPhone:</b> in Safari, tap Share, then <b>Add to Home Screen</b>.</li>
+      <li><b>Android:</b> in Chrome, open the menu and tap <b>Install app</b> or <b>Add to Home screen</b>.</li>
+    </ul>
+    <p class="small muted">Once it's been opened, it works without a signal.</p>
+  </section>
+
+  <button class="btn primary big" id="close-guide-2">Got it</button>
+  </div>`;
+}
+
 function render() {
-  for (const t of ["today", "library", "history"]) $("#tab-" + t).setAttribute("aria-selected", String(t === tab));
+  for (const t of ["today", "library", "history"]) $("#tab-" + t).setAttribute("aria-selected", String(t === tab && !showGuide));
+  $("#help").setAttribute("aria-pressed", String(showGuide));
   $("#unit-lb").setAttribute("aria-pressed", String(unit === "lb"));
   $("#unit-kg").setAttribute("aria-pressed", String(unit === "kg"));
   applyTheme();
@@ -458,7 +540,7 @@ function render() {
   const kept = {};
   if (!render.fresh) document.querySelectorAll("#view input[id], #view select[id]").forEach((el) => (kept[el.id] = el.value));
   render.fresh = false;
-  $("#view").innerHTML = `<div style="display:flex;flex-direction:column;gap:16px">${tab === "today" ? viewToday() : tab === "library" ? viewLibrary() : viewHistory()}</div>`;
+  $("#view").innerHTML = `<div style="display:flex;flex-direction:column;gap:16px">${showGuide ? viewGuide() : tab === "today" ? viewToday() : tab === "library" ? viewLibrary() : viewHistory()}</div>`;
   for (const [id, v] of Object.entries(kept)) { const el = document.getElementById(id); if (el) el.value = v; }
   if (focusId) document.getElementById(focusId)?.focus();
 }
@@ -532,7 +614,9 @@ importInput.addEventListener("change", async () => { const f = importInput.files
 // ---------- events ----------
 document.addEventListener("click", async (ev) => {
   const b = ev.target.closest("button"); if (!b) return;
-  if (b.id?.startsWith("tab-")) { tab = b.id.slice(4); ls.set("wc.tab", tab); editing = null; render.fresh = true; render(); return; }
+  if (b.id === "help") { showGuide = !showGuide; render.fresh = true; render(); window.scrollTo({ top: 0 }); return; }
+  if (b.id === "close-guide" || b.id === "close-guide-2") { showGuide = false; render.fresh = true; render(); window.scrollTo({ top: 0 }); return; }
+  if (b.id?.startsWith("tab-")) { showGuide = false; tab = b.id.slice(4); ls.set("wc.tab", tab); editing = null; render.fresh = true; render(); return; }
   if (b.id?.startsWith("theme-")) { theme = b.id.slice(6); ls.set("wc.theme", theme); applyTheme(); return; }
   if (b.id === "unit-lb" || b.id === "unit-kg") { unit = b.id.slice(5); ls.set("wc.unit", unit); render(); return; }
   if (b.id === "add-starters") { b.disabled = true; try { await addStarters(); } catch { toast("Couldn't add them. Try again."); } render(); return; }
