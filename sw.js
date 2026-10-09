@@ -1,5 +1,5 @@
 // Bump CACHE when you change any app file so phones pick up the new version.
-const CACHE = "workout-chooser-v2";
+const CACHE = "workout-chooser-v3";
 const APP_FILES = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
